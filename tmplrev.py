@@ -27,21 +27,21 @@ class ANY(Symbol):
 	def __init__(self):
 		Symbol.__init__(self,'ANY')
 
-# class Template(list):
-#     def __init__(self, arr):
-#         for item in arr:
-#             self.append(Chunk(item))
+class Template(list):
+    def __init__(self, arr):
+        for item in arr:
+        	self.append(Chunk(item))
 			
-#     def __str__(self):
+    def __str__(self):
+    	return  ", ".join( (str(item) for item in self) )
 
+class Chunk:
+    def __init__(self, arr):
+        self.left = arr[0]
+        self.right = arr[2]
 
-# class Chunk:
-#     def __init__(self, arr):
-#         self.left = arr[0]
-#         self.right = arr[2]
-
-#     def __str__(self):
-#         return self.left + " ... " + self.right
+    def __str__(self):
+        return " ".join((str(item) for item in self.left if not isinstance(item,Symbol))) + " ... " + "".join((str(item) for item in self.right if not isinstance(item,Symbol)))
 
 
 def diff(a, b):
@@ -98,42 +98,70 @@ import unittest
 class TestSequenceFunctions(unittest.TestCase):
 	def test_partition(self):
 		p = list(partition([1, 2, 3, 4, 5, 6, 7], 2, 1))
-		self.assertEqual(p, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7]])
+		self.assertEqual(p, [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7)])
 		p = list(partition([1, 2, 3, 4, 5, 6, 7], 2))
-		self.assertEqual(p, [[1, 2], [3, 4], [5, 6], [7]])
+		self.assertEqual(p, [(1, 2), (3, 4), (5, 6), (7,)])
 		p = list(partition([1, 2, 3, 4, 5, 6, 7], 2, 3))
-		self.assertEqual(p, [[1, 2], [4, 5], [7]])
+		self.assertEqual(p, [(1, 2), (4, 5), (7,)])
 
 	def test_partition_by(self):
-		partition_by([1, 2, 3], 2)
+		self.assertEqual(tuple(partition_by([1, 2, 3], 2)), ([1],2,[3]))
+
+class TestMain(unittest.TestCase):
+
+	def test_symbol(self):
+		self.assertEqual(ANY(), Symbol('ANY'))
+		self.assertEqual(ANY(), ANY())
+		self.assertNotEqual(EOF(), ANY())
+		self.assertEqual(str(ANY()), 'ANY')
+		self.assertIsInstance(ANY(), Symbol)
+
+	def test_diff(self):
+		self.assertEqual(tuple(diff(('a', 'b', 'c'), ('a', 'd', 'c'))), (BOF(), 'a', ANY(), 'c', EOF()))
+
+		d = diff("Hello I am khs".split(), "Hello I was in there khs".split())
+		self.assertEqual(tuple(partition(d, 2, 1)),((BOF(), 'Hello'), ('Hello', 'I'), ('I', ANY()), (ANY(), 'khs'), ('khs', EOF())))
+
+		d = diff("Hello there, I was been there aaa".split(),
+		         "Hello there, he was in there khs".split())
+		self.assertEqual( tuple(partition_by(d, ANY())),
+						  ([BOF(), 'Hello', 'there,'], ANY(), ['was'], ANY(), ['there'], ANY(), [EOF()]) )
+
+		d = diff("Hello! there, I was been there aaa".split(),
+		         "Hello there, he was in there khs".split())
+		self.assertEqual( tuple(partition_by(d, ANY())), 
+						  ([BOF()], ANY(), ['there,'], ANY(), ['was'], ANY(), ['there'], ANY(), [EOF()]) )
+
+		d = diff("Hello! there, I was been there aaa".split(),
+		         "Hello there, he was in there khs".split())
+		self.assertEqual( tuple(d),
+						  (BOF(), ANY(), 'there,', ANY(), 'was', ANY(), 'there', ANY(), EOF()) )
+
+		d = diff("Hello! there, I was been there aaa".split(),
+		         "Hello there, he was in there khs".split())
+		self.assertEqual( tuple(partition(partition_by(d, ANY()), 3, 2)), 
+						  (([BOF()], ANY(), ['there,']), (['there,'], ANY(), ['was']), (['was'], ANY(), ['there']), (['there'], ANY(), [EOF()])) )
+
+	
+	def test_detect(self):
+		d = detect("Hello! there, I was been there aaa".split(),
+		           "Hello there, he was in there khs".split())
+		self.assertEqual( tuple(d),
+						  (([BOF()], ANY(), ['there,']), (['there,'], ANY(), ['was']), (['was'], ANY(), ['there']), (['there'], ANY(), [EOF()])) )
+
+		d = detect("Hello there, I was been there aaa".split(),
+				   "Hello there, he was in there khs".split())
+		self.assertEqual( tuple(d),
+						  (([BOF(), 'Hello', 'there,'], ANY(), ['was']), (['was'], ANY(), ['there']), (['there'], ANY(), [EOF()])) )
+
+		d = detect("Hello there, I was been there aaa".split(),
+				   "Hello there, he was in there khs".split())
+		self.assertEqual( str(Template(d)), "Hello there, ... was, was ... there, there ... ")
+
 
 if __name__ == '__main__':
-	# print(Ellipsis)
-	# print(tuple(diff(('a', 'b', 'c'), ('a', 'd', 'c'))))
+	unittest.main()
 
-	# d = diff("Hello I am khs".split(), "Hello I was in there khs".split())
-	# print(tuple(partition(d, 2, 1)))
+	
 
-	# print(tuple(partition_by([1, 2, 3], 2)))
-
-	# d = diff("Hello there, I was been there aaa".split(),
-	#          "Hello there, he was in there khs".split())
-	# print(tuple(partition_by(d, Ellipsis)))
-
-	# d = diff("Hello! there, I was been there aaa".split(),
-	#          "Hello there, he was in there khs".split())
-	# print(tuple(partition_by(d, Ellipsis)))
-
-	# d = diff("Hello! there, I was been there aaa".split(),
-	#          "Hello there, he was in there khs".split())
-	# print(list(partition(partition_by(d, Ellipsis), 3, 2)))
-
-	# d = detect("Hello! there, I was been there aaa".split(),
-	#            "Hello there, he was in there khs".split())
-	# print(list(d))
-
-	d = detect("Hello there, I was been there aaa".split(),
-			   "Hello there, he was in there khs".split())
-	print(list(d))
-
-	# print( 'ANY' == ANY() )
+	
